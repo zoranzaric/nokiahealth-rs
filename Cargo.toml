@@ -1,0 +1,9 @@
+[package]
+name = "nokiahealth"
+version = "0.1.0"
+authors = ["Zoran Zaric <zz@zoranzaric.de>"]
+
+[dependencies]
+chrono = "0.4"
+csv = "1.0.0-beta.5"
+influent = "0.4"
