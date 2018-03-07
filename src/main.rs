@@ -3,47 +3,51 @@ extern crate csv;
 extern crate influent;
 
 use std::error::Error;
-use std::io;
+use std::path::Path;
 use std::process;
 
 use chrono::prelude::*;
 
 use csv::StringRecord;
 
+#[macro_use] extern crate log;
+extern crate loggerv;
+
+#[macro_use] extern crate clap;
+use clap::{Arg, App, SubCommand};
+
 use influent::create_client;
 use influent::client::{Client, Credentials};
 use influent::client::http::HttpClient;
 use influent::measurement::{Measurement, Value};
 
-fn example() -> Result<(), Box<Error>> {
-    let credentials = Credentials {
-        username: "root",
-        password: "root",
-        database: "test"
-    };
-    let hosts = vec!["http://localhost:8086"];
-    // let client = create_client(credentials, hosts);
+fn read_weight(path: &Path) -> Result<(), Box<Error>> {
     let client = connect();
 
-    let mut rdr = csv::ReaderBuilder::new()
-        .has_headers(true)
-        .delimiter(b',')
-        .quote(b'"')
-        .from_reader(io::stdin());
+    let mut rdr = match csv::ReaderBuilder::new()
+                    .has_headers(true)
+                    .delimiter(b',')
+                    .quote(b'"')
+                    .from_path(path) {
+            Ok(rdr) => rdr,
+            Err(e) => { panic!("{}", e); }
+        };
     for result in rdr.records() {
         let record = result?;
-        // println!("{:?}", record);
 
         let m = convert_weight_record_to_measurement(record);
-        println!("{:?}", m);
-        client.write_one(m, None);
+        debug!("{:?}", m);
+        match client.write_one(m, None) {
+            Ok(_) => { },
+            Err(e) => { error!("{:?}", e) },
+        }
 
     }
     Ok(())
 }
 
 fn convert_weight_record_to_measurement(record: StringRecord) -> Measurement<'static> {
-        println!("{:?}", record);
+        debug!("{:?}", record);
 
         let weight: Option<f64> = match record.get(1) {
             Option::None => None,
@@ -68,11 +72,17 @@ fn convert_weight_record_to_measurement(record: StringRecord) -> Measurement<'st
         let mut m = Measurement::new("weight");
         m.set_timestamp(local.timestamp());
         m.add_tag("name", "Zoran");
-        if (weight.is_some()) {
-            m.add_field("weight", Value::Float(weight.unwrap()));
+        match weight {
+            Some(weight) => { 
+                m.add_field("weight", Value::Float(weight));
+            },
+            None => { },
         };
-        if (fat.is_some()) {
-            m.add_field("fat", Value::Float(fat.unwrap()));
+        match fat {
+            Some(fat) => { 
+                m.add_field("fat", Value::Float(fat));
+            },
+            None => { },
         };
         return m;
 }
@@ -82,7 +92,7 @@ fn connect<'a>() -> HttpClient<'a> {
     let credentials = Credentials {
         username: "root",
         password: "root",
-        database: "test"
+        database: "health"
     };
     let hosts = vec!["http://localhost:8086"];
     let client = create_client(credentials, hosts);
@@ -90,8 +100,50 @@ fn connect<'a>() -> HttpClient<'a> {
 }
 
 fn main() {
-    if let Err(err) = example() {
-        println!("error running example: {}", err);
-        process::exit(1);
+    let matches = App::new("nokiahealth")
+                      .version(crate_version!())
+                      .author(crate_authors!())
+                      .arg(Arg::with_name("v")
+                          .short("v")
+                          .help("Sets the level of verbosity")
+                          .multiple(true)
+                          )
+                      .subcommand(SubCommand::with_name("weight")
+                          .about("Imports weights from a Nokia Health CSV file to an InfluxDB")
+                          .version(crate_version!())
+                          .author(crate_authors!())
+                          .arg(Arg::with_name("INPUT")
+                              .help("Sets the input file to use")
+                              .required(true)
+                              .index(1)
+                              )
+                          )
+                      .get_matches();
+    loggerv::Logger::new()
+        .verbosity(matches.occurrences_of("v"))
+        .level(true)
+        .line_numbers(true)
+        .colors(true)
+        .init()
+        .unwrap();
+
+    match matches.subcommand_name() {
+        Some("weight") => {
+            let matches = matches.subcommand_matches("weight").unwrap();
+
+            let input_path = Path::new(matches.value_of("INPUT").unwrap());
+
+            if let Err(err) = read_weight(&input_path) {
+                println!("error running read_weight: {}", err);
+                process::exit(1);
+            }
+        },
+        None => {
+            eprintln!("No subcommand");
+        },
+        _ => {
+            eprintln!("Unknown subcommand");
+        },
+
     }
 }
