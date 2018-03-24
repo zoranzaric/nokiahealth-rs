@@ -13,7 +13,7 @@ extern crate loggerv;
 
 #[macro_use]
 extern crate clap;
-use clap::{App, Arg, SubCommand};
+use clap::{App, AppSettings, Arg, SubCommand};
 
 fn read_weight(path: &Path) -> Result<(), Box<Error>> {
     let client = nokiahealth::storage::influxdb::connect();
@@ -29,6 +29,7 @@ fn main() {
     let matches = App::new("nokiahealth")
         .version(crate_version!())
         .author(crate_authors!())
+        .setting(AppSettings::SubcommandRequiredElseHelp)
         .arg(
             Arg::with_name("v")
                 .short("v")
