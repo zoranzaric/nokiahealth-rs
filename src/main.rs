@@ -6,11 +6,8 @@ use std::error::Error;
 use std::path::Path;
 use std::process;
 
-use chrono::prelude::*;
+extern crate nokiahealth;
 
-use csv::StringRecord;
-
-#[macro_use]
 extern crate log;
 extern crate loggerv;
 
@@ -18,86 +15,14 @@ extern crate loggerv;
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
-use influent::create_client;
-use influent::client::{Client, Credentials};
-use influent::client::http::HttpClient;
-use influent::measurement::{Measurement, Value};
-
 fn read_weight(path: &Path) -> Result<(), Box<Error>> {
-    let client = connect();
+    let client = nokiahealth::storage::influxdb::connect();
 
-    let mut rdr = match csv::ReaderBuilder::new()
-        .has_headers(true)
-        .delimiter(b',')
-        .quote(b'"')
-        .from_path(path)
-    {
-        Ok(rdr) => rdr,
-        Err(e) => {
-            panic!("{}", e);
-        }
-    };
-    for result in rdr.records() {
-        let record = result?;
+    let weights = nokiahealth::data::weight::read_weights_from_path(path);
 
-        let m = convert_weight_record_to_measurement(record);
-        debug!("{:?}", m);
-        match client.write_one(m, None) {
-            Ok(_) => {}
-            Err(e) => error!("{:?}", e),
-        }
-    }
+    nokiahealth::storage::influxdb::write_weights(&client, weights);
+
     Ok(())
-}
-
-fn convert_weight_record_to_measurement(record: StringRecord) -> Measurement<'static> {
-    debug!("{:?}", record);
-
-    let weight: Option<f64> = match record.get(1) {
-        Option::None => None,
-        Option::Some(s) => match s.parse() {
-            Result::Err(_) => None,
-            Result::Ok(weight) => Some(weight),
-        },
-    };
-    let fat: Option<f64> = match record.get(2) {
-        Option::None => None,
-        Option::Some(s) => match s.parse() {
-            Result::Err(_) => None,
-            Result::Ok(fat) => Some(fat),
-        },
-    };
-
-    let local: NaiveDateTime =
-        NaiveDateTime::parse_from_str(record.get(0).unwrap(), "%Y-%m-%d %H:%M:%S").unwrap();
-
-    let mut m = Measurement::new("weight");
-    m.set_timestamp(local.timestamp());
-    m.add_tag("name", "Zoran");
-    match weight {
-        Some(weight) => {
-            m.add_field("weight", Value::Float(weight));
-        }
-        None => {}
-    };
-    match fat {
-        Some(fat) => {
-            m.add_field("fat", Value::Float(fat));
-        }
-        None => {}
-    };
-    return m;
-}
-
-fn connect<'a>() -> HttpClient<'a> {
-    let credentials = Credentials {
-        username: "root",
-        password: "root",
-        database: "health",
-    };
-    let hosts = vec!["http://localhost:8086"];
-    let client = create_client(credentials, hosts);
-    client
 }
 
 fn main() {
@@ -109,6 +34,46 @@ fn main() {
                 .short("v")
                 .help("Sets the level of verbosity")
                 .multiple(true),
+        )
+        .arg(
+            Arg::with_name("host")
+                .long("host")
+                .help("Sets the InfluxDB host to use")
+                .default_value("localhost")
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name("port")
+                .long("port")
+                .help("Sets the InfluxDB database to use")
+                .default_value("8086")
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name("username")
+                .long("username")
+                .help("Sets the InfluxDB username to use")
+                .default_value("root")
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name("password")
+                .long("password")
+                .help("Sets the InfluxDB password to use")
+                .default_value("root")
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name("database")
+                .long("database")
+                .help("Sets the InfluxDB database to use")
+                .default_value("health")
+                .takes_value(true)
+                .required(false),
         )
         .subcommand(
             SubCommand::with_name("weight")
@@ -123,6 +88,7 @@ fn main() {
                 ),
         )
         .get_matches();
+
     loggerv::Logger::new()
         .verbosity(matches.occurrences_of("v"))
         .level(true)
