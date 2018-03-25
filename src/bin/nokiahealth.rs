@@ -16,12 +16,12 @@ extern crate loggerv;
 extern crate clap;
 use clap::{App, AppSettings, Arg, SubCommand};
 
-fn read_weight(connection_data: &ConnectionData, path: &Path) -> Result<(), Box<Error>> {
+fn read_weight(connection_data: &ConnectionData, path: &Path, name: Option<&str>) -> Result<(), Box<Error>> {
     let client = nokiahealth::storage::influxdb::connect(connection_data);
 
     let weights = nokiahealth::data::weight::read_weights_from_path(path);
 
-    nokiahealth::storage::influxdb::write_weights(&client, weights);
+    nokiahealth::storage::influxdb::write_weights(&client, weights, name);
 
     Ok(())
 }
@@ -83,6 +83,13 @@ fn main() {
                 .version(crate_version!())
                 .author(crate_authors!())
                 .arg(
+                    Arg::with_name("name")
+                        .long("name")
+                        .help("Name of the person the data belongs to")
+                        .takes_value(true)
+                        .required(false),
+                )
+                .arg(
                     Arg::with_name("INPUT")
                         .help("Sets the input file to use")
                         .required(true)
@@ -111,9 +118,11 @@ fn main() {
         Some("weight") => {
             let matches = matches.subcommand_matches("weight").unwrap();
 
+            let name: Option<&str> = matches.value_of("name");
+
             let input_path = Path::new(matches.value_of("INPUT").unwrap());
 
-            if let Err(err) = read_weight(&connection_data, &input_path) {
+            if let Err(err) = read_weight(&connection_data, &input_path, name) {
                 println!("error running read_weight: {}", err);
                 process::exit(1);
             }

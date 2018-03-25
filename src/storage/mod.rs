@@ -19,11 +19,8 @@ pub mod influxdb {
 
     impl<'a> From<Weight> for Measurement<'a> {
         fn from(weight: Weight) -> Self {
-            // TODO don't hardcode measurement
             let mut m = Measurement::new("weight");
             m.set_timestamp(weight.date.timestamp());
-            // TODO don't hardcode name
-            m.add_tag("name", "Zoran");
 
             m.add_field("weight", Value::Float(weight.weight));
 
@@ -46,14 +43,17 @@ pub mod influxdb {
         create_client(credentials, hosts)
     }
 
-    pub fn write_weights<C>(client: &C, weights: Vec<Weight>)
+    pub fn write_weights<C>(client: &C, weights: Vec<Weight>, name: Option<&str>)
     where
         C: Client,
     {
         for weight in weights {
-            let m: Measurement = weight.into();
+            let mut m: Measurement = weight.into();
+            if let Some(name) = name {
+                m.add_tag("name", name);
+            }
         
-        match client.write_one(m, None) {
+            match client.write_one(m, None) {
                 Ok(_) => {}
                 Err(e) => println!("{:?}", e),
             };
