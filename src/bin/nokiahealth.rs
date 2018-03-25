@@ -7,6 +7,7 @@ use std::path::Path;
 use std::process;
 
 extern crate nokiahealth;
+use nokiahealth::storage::influxdb::ConnectionData;
 
 extern crate log;
 extern crate loggerv;
@@ -15,8 +16,8 @@ extern crate loggerv;
 extern crate clap;
 use clap::{App, AppSettings, Arg, SubCommand};
 
-fn read_weight(path: &Path) -> Result<(), Box<Error>> {
-    let client = nokiahealth::storage::influxdb::connect();
+fn read_weight(connection_data: &ConnectionData, path: &Path) -> Result<(), Box<Error>> {
+    let client = nokiahealth::storage::influxdb::connect(connection_data);
 
     let weights = nokiahealth::data::weight::read_weights_from_path(path);
 
@@ -98,13 +99,21 @@ fn main() {
         .init()
         .unwrap();
 
+    
+    let connection_data = ConnectionData {
+        username: matches.value_of("username").unwrap().to_string(),
+        password: matches.value_of("password").unwrap().to_string(),
+        database: matches.value_of("database").unwrap().to_string(),
+        host: format!("http://{}:{}", matches.value_of("host").unwrap(), matches.value_of("port").unwrap()),
+    };
+
     match matches.subcommand_name() {
         Some("weight") => {
             let matches = matches.subcommand_matches("weight").unwrap();
 
             let input_path = Path::new(matches.value_of("INPUT").unwrap());
 
-            if let Err(err) = read_weight(&input_path) {
+            if let Err(err) = read_weight(&connection_data, &input_path) {
                 println!("error running read_weight: {}", err);
                 process::exit(1);
             }

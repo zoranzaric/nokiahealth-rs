@@ -11,11 +11,10 @@ pub mod influxdb {
     use data::weight::Weight;
 
     pub struct ConnectionData {
-        username: String,
-        password: String,
-        database: String,
-        host: String,
-        port: String,
+        pub username: String,
+        pub password: String,
+        pub database: String,
+        pub host: String,
     }
 
     impl<'a> From<Weight> for Measurement<'a> {
@@ -36,13 +35,14 @@ pub mod influxdb {
         }
     }
 
-    pub fn connect<'a>() -> HttpClient<'a> {
+    pub fn connect<'a>(connection_data: &'a ConnectionData) -> HttpClient<'a> {
         let credentials = Credentials {
-            username: "root",
-            password: "root",
-            database: "health",
+            username: connection_data.username.as_ref(),
+            password: connection_data.password.as_ref(),
+            database: connection_data.database.as_ref(),
         };
-        let hosts = vec!["http://localhost:8086"];
+        
+        let hosts = vec![connection_data.host.as_ref()];
         create_client(credentials, hosts)
     }
 

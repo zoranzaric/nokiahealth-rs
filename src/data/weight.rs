@@ -33,6 +33,17 @@ pub fn read_weights_from_path(path: &Path) -> Vec<Weight>
 }
 
 /// A function to read a weight vector from a given `std::io::Read`.
+/// 
+/// # Example
+/// 
+///```rust,ignore
+///let example = r#"Date,Gewicht,Fettmasse,Knochenmasse,Muskelmasse,Wasseranteil,Kommentare
+///"2018-03-03 08:47:03",80.03,19.54,,,,
+///"#;
+///let string_reader = StringReader::new(example);
+///
+///let weights = nokiahealth::data::weight::read_weights_from_reader(string_reader);
+///```
 pub fn read_weights_from_reader<R>(r: R) -> Vec<Weight>
 where
     R: Read,
