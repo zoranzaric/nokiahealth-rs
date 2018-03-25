@@ -38,7 +38,7 @@ pub mod influxdb {
             password: connection_data.password.as_ref(),
             database: connection_data.database.as_ref(),
         };
-        
+
         let hosts = vec![connection_data.host.as_ref()];
         create_client(credentials, hosts)
     }
@@ -52,7 +52,7 @@ pub mod influxdb {
             if let Some(name) = name {
                 m.add_tag("name", name);
             }
-        
+
             match client.write_one(m, None) {
                 Ok(_) => {}
                 Err(e) => println!("{:?}", e),

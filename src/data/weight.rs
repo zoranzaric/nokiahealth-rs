@@ -12,8 +12,7 @@ pub struct Weight {
 }
 
 /// A function to read a weight vector from a given path.
-pub fn read_weights_from_path(path: &Path) -> Vec<Weight>
-{
+pub fn read_weights_from_path(path: &Path) -> Vec<Weight> {
     let mut rdr = match csv::ReaderBuilder::new()
         .has_headers(true)
         .delimiter(b',')
@@ -33,9 +32,9 @@ pub fn read_weights_from_path(path: &Path) -> Vec<Weight>
 }
 
 /// A function to read a weight vector from a given `std::io::Read`.
-/// 
+///
 /// # Example
-/// 
+///
 ///```rust,ignore
 ///let example = r#"Date,Gewicht,Fettmasse,Knochenmasse,Muskelmasse,Wasseranteil,Kommentare
 ///"2018-03-03 08:47:03",80.03,19.54,,,,

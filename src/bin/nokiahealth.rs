@@ -13,7 +13,11 @@ use nokiahealth::storage::influxdb::ConnectionData;
 extern crate clap;
 use clap::{App, AppSettings, Arg, SubCommand};
 
-fn read_weight(connection_data: &ConnectionData, path: &Path, name: Option<&str>) -> Result<(), Box<Error>> {
+fn read_weight(
+    connection_data: &ConnectionData,
+    path: &Path,
+    name: Option<&str>,
+) -> Result<(), Box<Error>> {
     let client = nokiahealth::storage::influxdb::connect(connection_data);
 
     let weights = nokiahealth::data::weight::read_weights_from_path(path);
@@ -94,12 +98,16 @@ fn main() {
                 ),
         )
         .get_matches();
-    
+
     let connection_data = ConnectionData {
         username: matches.value_of("username").unwrap().to_string(),
         password: matches.value_of("password").unwrap().to_string(),
         database: matches.value_of("database").unwrap().to_string(),
-        host: format!("http://{}:{}", matches.value_of("host").unwrap(), matches.value_of("port").unwrap()),
+        host: format!(
+            "http://{}:{}",
+            matches.value_of("host").unwrap(),
+            matches.value_of("port").unwrap()
+        ),
     };
 
     match matches.subcommand_name() {
