@@ -9,9 +9,6 @@ use std::process;
 extern crate nokiahealth;
 use nokiahealth::storage::influxdb::ConnectionData;
 
-extern crate log;
-extern crate loggerv;
-
 #[macro_use]
 extern crate clap;
 use clap::{App, AppSettings, Arg, SubCommand};
@@ -97,15 +94,6 @@ fn main() {
                 ),
         )
         .get_matches();
-
-    loggerv::Logger::new()
-        .verbosity(matches.occurrences_of("v"))
-        .level(true)
-        .line_numbers(true)
-        .colors(true)
-        .init()
-        .unwrap();
-
     
     let connection_data = ConnectionData {
         username: matches.value_of("username").unwrap().to_string(),
